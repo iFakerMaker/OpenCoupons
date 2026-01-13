@@ -1,7 +1,0 @@
-{
-  "name": "OpenCoupon - Community Driven Savings",
-  "description": "An open-source browser extension UI for discovering and contributing shopping coupons without the controversy. Built for transparency and community trust.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
-}
