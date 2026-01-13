@@ -1,20 +1,37 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# OpenCoupon 🏷️
 
-# Run and deploy your AI Studio app
+OpenCoupon is an open-source browser extension designed to help you find and contribute coupon codes without the clutter of ads or trackers. It's built for transparency and community trust.
 
-This contains everything you need to run your app locally.
+## Features
+- **Automatic Store Detection**: Instantly shows coupons for the website you are currently visiting.
+- **Community Driven**: Anyone can share and contribute new discount codes.
+- **Voting System**: Help others find working codes by upvoting successful ones.
+- **Privacy First**: No tracking, no ads. The extension runs locally in your browser.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1pLRmq11Lgh_3VbpFM9eIEuB6OqAoE_Iz
+---
 
-## Run Locally
+## Installation (for Users)
 
-**Prerequisites:**  Node.js
+Since this extension is in open development, it is not yet available on the official stores. You can install it manually:
 
+1. Download the latest **`OpenCoupon.zip`** from the [Releases](https://github.com/iFakerMaker/OpenCoupons/releases) section.
+2. Unzip the file to a folder on your computer.
+3. Open your browser's extension page:
+   - **Chrome / Edge / Brave**: Go to `chrome://extensions/`, enable **Developer Mode** (top right), and click **Load unpacked**. Select the folder you just unzipped.
+   - **Firefox**: Go to `about:debugging`, click **This Firefox**, then **Load Temporary Add-on...**. Select the `manifest.json` inside your unzipped folder.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+
+## Development (for Developers)
+
+If you want to build the project from source:
+
+1. Clone the repository: `git clone https://github.com/iFakerMaker/OpenCoupons.git`
+2. Install dependencies: `npm install`
+3. Create a production build: `npm run build`
+4. The ready-to-use extension will be generated in the `/dist` folder.
+
+---
+
+## License
+MIT License - see [LICENSE](LICENSE) for details.
