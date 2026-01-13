@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* Falls Tailwind deine Dateien im Hauptordner nicht automatisch findet, 
+   zwingen wir es hier mit @source dazu: */
+@source "./App.tsx";
+@source "./index.tsx";
+@source "./components/**/*.{ts,tsx}";
+
+/* Dein lila Hintergrund-Fix von vorhin (optional zum Testen) */
+#root {
+  min-height: 500px;
+}

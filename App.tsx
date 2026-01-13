@@ -7,16 +7,34 @@ import CouponCard from './components/CouponCard';
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>(ViewMode.LIST);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [missingStores, setMissingStores] = useState<{ store: string }[]>([]);
   const [referralTemplate, setReferralTemplate] = useState<string | null>(null);
   const [newCode, setNewCode] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Fallback domain for web preview; in extension, use current tab hostname
-  const domain = window.location.hostname === 'localhost' || window.location.hostname === '' || window.location.hostname.includes('webcontainer')
-    ? 'nike.com' 
-    : window.location.hostname;
+  const [domain, setDomain] = useState('nike.com'); // 'nike.com' als Startwert
+
+  useEffect(() => {
+    // Funktion um die Domain des aktiven Tabs abzufragen
+    const getActiveTab = async () => {
+      if (typeof chrome !== 'undefined' && chrome.tabs) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]?.url) {
+            const url = new URL(tabs[0].url);
+            setDomain(url.hostname.replace('www.', ''));
+          }
+        });
+      } else if (typeof browser !== 'undefined' && browser.tabs) {
+        // Für Firefox
+        const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+        if (tabs[0]?.url) {
+          const url = new URL(tabs[0].url);
+          setDomain(url.hostname.replace('www.', ''));
+        }
+      }
+    };
+    getActiveTab();
+  }, []);
 
   const currentStore: StoreInfo = {
     name: domain.split('.')[0].toUpperCase(),
@@ -40,12 +58,6 @@ const App: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
-
-  useEffect(() => {
-    if (view === ViewMode.TASKS) {
-      couponService.getMissingReferrals().then(setMissingStores);
-    }
-  }, [view]);
 
   const handleAddCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,15 +109,6 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-xl font-bold tracking-tight">OpenCoupon</h1>
           </div>
-          <button 
-            onClick={() => setView(view === ViewMode.TASKS ? ViewMode.LIST : ViewMode.TASKS)}
-            className={`p-2 rounded-lg transition-all ${view === ViewMode.TASKS ? 'bg-white text-indigo-600 shadow-sm' : 'bg-white/10 hover:bg-white/20'}`}
-            title="Registry Tasks"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-            </svg>
-          </button>
         </div>
 
         <div className="flex items-center gap-3 bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
@@ -127,7 +130,7 @@ const App: React.FC = () => {
           <>
             <div className="flex items-center justify-between mb-1">
               <h2 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">
-                D1 Verified Coupons ({coupons.length})
+                Verified Coupons ({coupons.length})
               </h2>
               <button onClick={() => setView(ViewMode.ADD)} className="text-indigo-600 text-xs font-bold hover:underline">
                 + New Code
@@ -137,7 +140,7 @@ const App: React.FC = () => {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-10 gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <p className="text-gray-400 text-xs font-medium">Fetching from D1...</p>
+                <p className="text-gray-400 text-xs font-medium">Searching for coupons...</p>
               </div>
             ) : coupons.length > 0 ? (
               coupons.map(coupon => (
@@ -161,31 +164,6 @@ const App: React.FC = () => {
             )}
           </>
         )}
-
-        {view === ViewMode.TASKS && (
-          <div className="space-y-4">
-            <h2 className="text-gray-800 text-lg font-bold">Registry Tasks</h2>
-            <p className="text-gray-500 text-xs leading-relaxed">The community needs referral links for these active stores to keep the registry sustainable.</p>
-            <div className="space-y-2">
-              {missingStores.length > 0 ? missingStores.map(({ store }) => (
-                <div key={store} className="bg-white p-3 rounded-lg border border-indigo-100 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">{store}</span>
-                  <button className="text-[10px] bg-indigo-600 text-white px-3 py-1 rounded-full font-bold">
-                    Provide
-                  </button>
-                </div>
-              )) : (
-                <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-200">
-                  <p className="text-gray-400 text-xs italic">All stores have community referrals!</p>
-                </div>
-              )}
-            </div>
-            <button onClick={() => setView(ViewMode.LIST)} className="w-full py-2 text-indigo-600 text-xs font-bold">
-              ← Back to Coupons
-            </button>
-          </div>
-        )}
-
         {view === ViewMode.ADD && (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 animate-in fade-in zoom-in duration-200">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Share a Code</h2>
@@ -210,7 +188,7 @@ const App: React.FC = () => {
               <div className="pt-2 flex gap-3">
                 <button type="button" onClick={() => setView(ViewMode.LIST)} className="flex-1 py-3 text-gray-400 text-sm font-bold">Cancel</button>
                 <button type="submit" className="flex-[2] py-3.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">
-                  Sync to D1
+                  Submit Coupon
                 </button>
               </div>
             </form>
@@ -224,7 +202,7 @@ const App: React.FC = () => {
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-1">D1 Synced!</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-1">Success!</h2>
             <p className="text-gray-400 text-xs">Thank you for contributing.</p>
           </div>
         )}
@@ -233,7 +211,7 @@ const App: React.FC = () => {
       <footer className="px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-400 font-bold uppercase tracking-widest">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-          D1 Live
+          Live
         </div>
         <span>Open Source v1.2.2</span>
       </footer>
