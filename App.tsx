@@ -213,7 +213,7 @@ const App: React.FC = () => {
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           Live
         </div>
-        <span>Open Source v1.2.2</span>
+        <span>v1.0.0</span>
       </footer>
     </div>
   );
