@@ -37,7 +37,14 @@ export const saveCoupon = async (coupon: { store: string; code: string; descript
   }
 };
 
-export const voteCoupon = async (id: string, type: 'up' | 'down'): Promise<void> => {
+/**
+ * Sends a vote or un-vote action to the server.
+ * Allowed types: 'up', 'down', 'remove_up', 'remove_down'
+ */
+export const voteCoupon = async (
+  id: string, 
+  type: 'up' | 'down' | 'remove_up' | 'remove_down'
+): Promise<void> => {
   try {
     const resp = await fetch(`${API_BASE}/vote`, {
       method: 'POST',
@@ -46,7 +53,7 @@ export const voteCoupon = async (id: string, type: 'up' | 'down'): Promise<void>
     });
     if (!resp.ok) throw new Error(`Failed to vote: ${resp.status}`);
   } catch (e) {
-    console.error('Failed to submit vote to D1:', e);
+    console.error('Failed to submit vote to API:', e);
   }
 };
 

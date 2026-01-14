@@ -1,23 +1,14 @@
-
 import React, { useState, memo } from 'react';
 import { Coupon } from '../types';
 
 interface CouponCardProps {
   coupon: Coupon;
-  onVote: (id: string, newVote: 'up' | 'down' | null, previousVote: 'up' | 'down' | null) => void;
+  onVote: (id: string, type: 'up' | 'down') => void;
+  userVote?: 'up' | 'down' | null;
 }
 
-const CouponCard: React.FC<CouponCardProps> = ({ coupon, onVote }) => {
-  const [voted, setVoted] = useState<'up' | 'down' | null>(null);
+const CouponCard: React.FC<CouponCardProps> = ({ coupon, onVote, userVote }) => {
   const [copied, setCopied] = useState(false);
-
-  const handleVote = (type: 'up' | 'down') => {
-    const previousVote = voted;
-    const newVote = voted === type ? null : type;
-    
-    setVoted(newVote);
-    onVote(coupon.id, newVote, previousVote);
-  };
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(coupon.code);
@@ -53,30 +44,28 @@ const CouponCard: React.FC<CouponCardProps> = ({ coupon, onVote }) => {
       <div className="flex items-center justify-between pt-3 border-t border-gray-50">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => handleVote('up')}
+            onClick={() => onVote(coupon.id, 'up')}
             className={`flex items-center gap-1.5 transition-all p-1 rounded-md ${
-              voted === 'up' 
+              userVote === 'up' 
                 ? 'text-green-600 bg-green-50 scale-110' 
                 : 'text-gray-400 hover:text-green-600 hover:bg-gray-50'
             }`}
-            title={voted === 'up' ? "Remove Upvote" : "Upvote"}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={voted === 'up' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={userVote === 'up' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>
             <span className="text-xs font-medium">{coupon.upvotes}</span>
           </button>
           
           <button 
-            onClick={() => handleVote('down')}
+            onClick={() => onVote(coupon.id, 'down')}
             className={`flex items-center gap-1.5 transition-all p-1 rounded-md ${
-              voted === 'down' 
+              userVote === 'down' 
                 ? 'text-red-600 bg-red-50 scale-110' 
                 : 'text-gray-400 hover:text-red-600 hover:bg-gray-50'
             }`}
-            title={voted === 'down' ? "Remove Downvote" : "Downvote"}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={voted === 'down' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill={userVote === 'down' ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
             <span className="text-xs font-medium">{coupon.downvotes}</span>

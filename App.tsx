@@ -11,25 +11,41 @@ const App: React.FC = () => {
   const [newCode, setNewCode] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [loading, setLoading] = useState(true);
+  const [domain, setDomain] = useState('nike.com');
+  const [userVotes, setUserVotes] = useState<Record<string, 'up' | 'down' | null>>({});
 
-  const [domain, setDomain] = useState('nike.com'); // 'nike.com' als Startwert
-
+  // 1. Lade gespeicherte Votes vom Nutzer (Lokal)
   useEffect(() => {
-    // Funktion um die Domain des aktiven Tabs abzufragen
+    const savedVotes = localStorage.getItem('opencoupon_user_votes');
+    if (savedVotes) {
+      setUserVotes(JSON.parse(savedVotes));
+    }
+  }, []);
+
+  // 2. Speichere Votes lokal ab
+  useEffect(() => {
+    localStorage.setItem('opencoupon_user_votes', JSON.stringify(userVotes));
+  }, [userVotes]);
+
+  // 3. Domain des aktiven Tabs ermitteln
+  useEffect(() => {
     const getActiveTab = async () => {
       if (typeof chrome !== 'undefined' && chrome.tabs) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs[0]?.url) {
-            const url = new URL(tabs[0].url);
-            setDomain(url.hostname.replace('www.', ''));
+            try {
+              const url = new URL(tabs[0].url);
+              setDomain(url.hostname.replace('www.', ''));
+            } catch (e) { console.error("Invalid URL"); }
           }
         });
       } else if (typeof browser !== 'undefined' && browser.tabs) {
-        // Für Firefox
         const tabs = await browser.tabs.query({ active: true, currentWindow: true });
         if (tabs[0]?.url) {
-          const url = new URL(tabs[0].url);
-          setDomain(url.hostname.replace('www.', ''));
+          try {
+            const url = new URL(tabs[0].url);
+            setDomain(url.hostname.replace('www.', ''));
+          } catch (e) { console.error("Invalid URL"); }
         }
       }
     };
@@ -48,11 +64,6 @@ const App: React.FC = () => {
     setCoupons(coupons || []);
     setReferralTemplate(referral);
     setLoading(false);
-
-    const processedUrl = getProcessedUrl(window.location.href, referral);
-    if (processedUrl && processedUrl !== window.location.href) {
-      console.log('OpenCoupon: Applying community referral string:', processedUrl);
-    }
   }, [currentStore.domain]);
 
   useEffect(() => {
@@ -79,36 +90,40 @@ const App: React.FC = () => {
     }, 1500);
   };
 
-  const handleVote = useCallback(async (id: string, newVote: 'up' | 'down' | null) => {
-    if (newVote) {
-      await couponService.voteCoupon(id, newVote);
-      setCoupons(prev => prev.map(c => {
-        if (c.id === id) {
-          const upInc = newVote === 'up' ? 1 : 0;
-          const downInc = newVote === 'down' ? 1 : 0;
-          return {
-            ...c,
-            upvotes: c.upvotes + upInc,
-            downvotes: c.downvotes + downInc
-          };
-        }
-        return c;
-      }).filter(c => (c.upvotes - c.downvotes) > -5));
+  // 4. Verbesserte Vote-Logik (Toggle)
+  const handleVote = useCallback(async (id: string, type: 'up' | 'down') => {
+    const currentVote = userVotes[id];
+    let action: 'up' | 'down' | 'remove_up' | 'remove_down' | null = null;
+
+    if (currentVote === type) {
+      // Rückgängig machen
+      action = type === 'up' ? 'remove_up' : 'remove_down';
+      setUserVotes(prev => ({ ...prev, [id]: null }));
+    } else if (!currentVote) {
+      // Neu voten
+      action = type;
+      setUserVotes(prev => ({ ...prev, [id]: type }));
+    } else {
+      // Wenn schon anders gevotet wurde, ignorieren wir es (muss erst unvoted werden)
+      return;
     }
-  }, []);
+
+    if (action) {
+      await couponService.voteCoupon(id, action);
+      loadData(); 
+    }
+  }, [userVotes, loadData]);
 
   return (
     <div className="w-[380px] min-h-[500px] bg-white flex flex-col shadow-2xl overflow-hidden rounded-xl border border-gray-200">
       <header className="bg-indigo-600 px-6 py-5 text-white">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="bg-white p-1 rounded-lg">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">OpenCoupon</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="bg-white p-1 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+            </svg>
           </div>
+          <h1 className="text-xl font-bold tracking-tight">OpenCoupon</h1>
         </div>
 
         <div className="flex items-center gap-3 bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
@@ -144,15 +159,15 @@ const App: React.FC = () => {
               </div>
             ) : coupons.length > 0 ? (
               coupons.map(coupon => (
-                <CouponCard key={coupon.id} coupon={coupon} onVote={handleVote} />
+                <CouponCard 
+                  key={coupon.id} 
+                  coupon={coupon} 
+                  onVote={handleVote} 
+                  userVote={userVotes[coupon.id]} 
+                />
               ))
             ) : (
               <div className="text-center py-12 px-6 bg-white rounded-xl border border-gray-100 shadow-sm">
-                <div className="mb-4 inline-flex items-center justify-center w-12 h-12 bg-gray-50 rounded-full">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
                 <p className="text-gray-500 text-sm mb-4">No verified coupons for this store.</p>
                 <button 
                   onClick={() => setView(ViewMode.ADD)}
@@ -164,6 +179,7 @@ const App: React.FC = () => {
             )}
           </>
         )}
+
         {view === ViewMode.ADD && (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 animate-in fade-in zoom-in duration-200">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Share a Code</h2>
@@ -187,7 +203,7 @@ const App: React.FC = () => {
               </div>
               <div className="pt-2 flex gap-3">
                 <button type="button" onClick={() => setView(ViewMode.LIST)} className="flex-1 py-3 text-gray-400 text-sm font-bold">Cancel</button>
-                <button type="submit" className="flex-[2] py-3.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-95 transition-all">
+                <button type="submit" className="flex-[2] py-3.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">
                   Submit Coupon
                 </button>
               </div>
@@ -197,11 +213,6 @@ const App: React.FC = () => {
 
         {view === ViewMode.SUCCESS && (
           <div className="flex flex-col items-center justify-center py-20 text-center animate-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            </div>
             <h2 className="text-xl font-bold text-gray-800 mb-1">Success!</h2>
             <p className="text-gray-400 text-xs">Thank you for contributing.</p>
           </div>
@@ -213,7 +224,7 @@ const App: React.FC = () => {
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
           Live
         </div>
-        <span>v1.0.0</span>
+        <span>v1.1.0</span>
       </footer>
     </div>
   );

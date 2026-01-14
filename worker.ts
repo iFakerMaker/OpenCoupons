@@ -1,6 +1,4 @@
-
 export interface Env {
-  // Use any for DB to fix 'Cannot find name D1Database' error in non-Worker environments
   DB: any;
 }
 
@@ -9,7 +7,6 @@ export default {
     const url = new URL(request.url);
     const method = request.method;
 
-    // CORS Headers
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -50,27 +47,20 @@ export default {
         return new Response('OK', { headers: corsHeaders });
       }
 
-      // POST /vote
+      // POST /vote (MIT UNVOTE LOGIK)
       if (url.pathname === '/vote' && method === 'POST') {
         const { id, type } = await request.json() as any;
-        const column = type === 'up' ? 'upvotes' : 'downvotes';
         
-        await env.DB.prepare(
-          `UPDATE coupons SET ${column} = ${column} + 1 WHERE id = ?`
-        ).bind(id).run();
+        let query = "";
+        if (type === 'up') query = "UPDATE coupons SET upvotes = upvotes + 1 WHERE id = ?";
+        if (type === 'down') query = "UPDATE coupons SET downvotes = downvotes + 1 WHERE id = ?";
+        if (type === 'remove_up') query = "UPDATE coupons SET upvotes = MAX(0, upvotes - 1) WHERE id = ?";
+        if (type === 'remove_down') query = "UPDATE coupons SET downvotes = MAX(0, downvotes - 1) WHERE id = ?";
+        
+        if (query === "") return new Response('Invalid vote type', { status: 400 });
 
+        await env.DB.prepare(query).bind(id).run();
         return new Response('OK', { headers: corsHeaders });
-      }
-
-      // GET /missing-referrals
-      if (url.pathname === '/missing-referrals' && method === 'GET') {
-        const missing = await env.DB.prepare(`
-          SELECT DISTINCT store FROM coupons 
-          WHERE store NOT IN (SELECT store FROM referrals)
-          LIMIT 20
-        `).all();
-        
-        return Response.json(missing.results, { headers: corsHeaders });
       }
 
       return new Response('Not Found', { status: 404 });
